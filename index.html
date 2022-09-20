@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chromatic Layout Tool</title>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <style>
+        :root {
+            --button-size: 3rem;
+        }
+        .button {
+            width: var(--button-size);
+            height: var(--button-size);
+            border-radius: 2rem;
+            background-color: white;
+            display: grid;
+            place-items: center;
+            border: 2px solid black;
+            box-sizing: border-box;
+        }
+        .sharp {
+            background-color: black;
+            color: white;
+        }
+        .active {
+            background-color: blue;
+            color: white;
+        }
+        .grid-a {
+            display: grid;
+            grid-template-columns: repeat(5, var(--button-size));
+        }
+        .grid-b {
+            display: flex;
+            flex-direction: column;
+        }
+        .note-holder {
+            display: flex;
+            flex-direction: row;
+        }
+        .transport {
+            display: grid;
+            place-items: center;
+            position: fixed;
+            width: 100%;
+            bottom: 0;
+            background-color: azure;
+            padding: 1rem;
+        }
+        .controls {
+            display: grid;
+        }
+        .grid {
+            display: grid;
+        }
+        .grid-col {
+            grid-auto-flow: column;
+        }
+    </style>
+</head>
+<body>
+    <div class="note-holder">
+    </div>
+    <div class="transport">
+        <input type="file" id="filereader"/>
+        <div class="controls">
+            <select id="tracks"></select>
+            <div class="grid grid-col">
+                <button id="prev">Prev</button>
+                <span id="curStep">0</span>
+                <button id="next">Next</button>
+            </div>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.1.min.js" integrity="sha256-o88AwQnZB+VDvE9tvIXrMQaPlFFSUTR+nldQm1LuPXQ=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script type="module">
+        import './midi.js'
+        window.onload = function(){
+            // configure MIDIReader
+            var source = document.getElementById('filereader');
+            MidiParser.parse( source, function(obj){
+                // Your callback function
+                console.log(obj)
+                window._data = obj
+                loadTrack(0)
+                getTrackNames()
+                $(source).hide()
+                $(".controls").show()
+            });
+        };
+    </script>
+    <script>
+        const noteLabels = [
+        'C', 'C#/Db',
+        'D', 'D#/Eb',
+        'E',
+        'F', 'F#/Gb',
+        'G', 'G#/Ab',
+        'A', 'A#/Bb',
+        'B',
+        ]
+
+        const classLabels = [
+        'C', 'Db',
+        'D', 'Eb',
+        'E',
+        'F', 'Gb',
+        'G', 'Ab',
+        'A', 'Bb',
+        'B',
+        ]
+        const activateNote = (cLabel) => {
+            $(`.${cLabel}`).addClass('active')
+        }
+        const deactivateNote = (cLabel) => {
+            $(`.${cLabel}`).removeClass('active')
+        }
+        const clearNotes = () => {
+            $('.button').removeClass('active')
+        }
+        const buildCol = (startNote, numButtons, padding) => {
+            let markup = `<div class="grid-b" style="padding-top: ${padding};">`;
+            let startIndex = classLabels.indexOf(startNote)
+            let idx = startIndex;
+            for (let index = 0; index < numButtons; index++) {
+                let note = noteLabels[idx]
+                let cLabel = classLabels[idx]
+                let isSharp = note.indexOf('#') > -1
+                markup += `<div class="button ${isSharp ? `sharp` : `natural`} ${cLabel}">${note}</div>`
+                idx = ((((index+1) % 4) * 3) + startIndex) % 12
+            }
+            markup += `</div>`
+            $('.note-holder').append(markup)
+        }
+
+        const getTrackNames = () => {
+            const names = window._data.track.map( x => {
+                if(x.event[0].type == 255 && x.event[0].metaType == 3) {
+                    return `${x.event[0].data} : (${x.event.length})`
+                }
+                return `unknown : (${x.event.length})`
+            })
+            console.log(names)
+            const options =  names.map((x,i) => {
+                    return {
+                        id: i,
+                        text: x,
+                        selected: i == window._trackNumber
+                    }
+                })
+                $("#tracks").select2({
+                    data: options
+                })
+        }
+
+        const loadTrack = (idx) => {
+            window._trackNumber = idx
+            window._eventIdx = 0
+            $('#curStep').text(window._eventIdx)
+        } 
+
+        const advance = _ => {window._eventIdx++; processEvent(window._eventIdx)}
+        const reverse = _ => {window._eventIdx--; processEvent(window._eventIdx)}
+
+        const processEvent = (idx) => {
+            // console.log(idx)
+            if(idx < 0) {
+                loadTrack(window._trackNumber)
+                return
+            }
+            if(idx >= window._data.track[window._trackNumber].event.length) {
+                loadTrack(window._trackNumber)
+                return
+            }
+            $('#curStep').text(window._eventIdx)
+            const currEvent = window._data.track[window._trackNumber].event[idx]
+
+            if(currEvent.type == 8) {
+                const note = classLabels[currEvent.data[0] % 12]
+                deactivateNote(note)
+            }
+
+            if(currEvent.type == 9) {
+                const note = classLabels[currEvent.data[0] % 12]
+                activateNote(note)
+            }
+            // Check next event
+            if(idx+1 != window._data.track[window._trackNumber].event.length) {
+                const nextEvent =  window._data.track[window._trackNumber].event[idx+1]
+                if(nextEvent.deltaTime == 0) {
+                    advance()
+                }
+            }
+        }
+
+        $(document).ready(() => {
+            $(".controls").hide()
+            buildCol(`A`, 12, `1.5rem`)
+            buildCol(`G`, 12, `0rem`)
+            buildCol(`Ab`, 12, `1.5rem`)
+            buildCol(`A`, 12, `2.5rem`)
+            buildCol(`G`, 12, `1.5rem`)
+            $("#tracks").on("change", (evt) => {
+                loadTrack((evt.currentTarget.value))
+            })
+            $("#prev").on("click", reverse)
+            $("#next").on("click", advance)
+        })
+    </script>
+</body>
+</html>
