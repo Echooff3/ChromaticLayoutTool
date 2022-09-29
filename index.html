@@ -72,16 +72,18 @@
                 <span id="curStep">0</span>
                 <button id="next">Next</button>
             </div>
+            <button id="play">Play</button>
         </div>
     </div>
     <script src="https://code.jquery.com/jquery-3.6.1.min.js" integrity="sha256-o88AwQnZB+VDvE9tvIXrMQaPlFFSUTR+nldQm1LuPXQ=" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script type="module">
         import './midi.js'
+        import './tone.js'
         window.onload = function(){
             // configure MIDIReader
             var source = document.getElementById('filereader');
-            MidiParser.parse( source, function(obj){
+            MidiParser.parse( source, (obj) => {
                 // Your callback function
                 console.log(obj)
                 window._data = obj
@@ -89,8 +91,15 @@
                 getTrackNames()
                 $(source).hide()
                 $(".controls").show()
+                startAudio()
             });
         };
+        const startAudio = async _ => {
+            await Tone.start()
+            console.log('audio is ready')
+            window._synth = new Tone.PolySynth(Tone.Synth).toDestination();
+            window._synth.triggerAttackRelease("C4","8n")
+        }
     </script>
     <script>
         const noteLabels = [
@@ -114,6 +123,7 @@
         ]
         const activateNote = (cLabel) => {
             $(`.${cLabel}`).addClass('active')
+            window._synth.triggerAttackRelease(`${cLabel}3`,"8n")
         }
         const deactivateNote = (cLabel) => {
             $(`.${cLabel}`).removeClass('active')
@@ -159,7 +169,10 @@
         const loadTrack = (idx) => {
             window._trackNumber = idx
             window._eventIdx = 0
+            playing = false
+            $("#play").text('Play')
             $('#curStep').text(window._eventIdx)
+            classLabels.forEach(x => deactivateNote(x))
         } 
 
         const advance = _ => {window._eventIdx++; processEvent(window._eventIdx)}
@@ -195,7 +208,22 @@
                 }
             }
         }
-
+        //FPS Loop
+        let fps = 5;
+        let playing = false
+        const update = _ => {
+            setTimeout(function() {
+                requestAnimationFrame(update);
+                if(playing)
+                    advance()
+        
+            }, 1000 / fps);
+        }
+        const togglePlayback = _ => {
+            playing = !playing
+            $("#play").text(playing ? 'Pause' : 'Play')
+        }
+        
         $(document).ready(() => {
             $(".controls").hide()
             buildCol(`A`, 12, `1.5rem`)
@@ -208,6 +236,8 @@
             })
             $("#prev").on("click", reverse)
             $("#next").on("click", advance)
+            $("#play").on("click", togglePlayback)
+            update()
         })
     </script>
 </body>
