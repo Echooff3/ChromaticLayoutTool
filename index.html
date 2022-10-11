@@ -100,6 +100,7 @@
                 // Your callback function
                 console.log(obj)
                 window._data = obj
+                fps = obj.timeDivision
                 loadTrack(0)
                 getTrackNames()
                 $(source).hide()
@@ -137,9 +138,11 @@
         const activateNote = (cLabel) => {
             $(`.${cLabel}`).addClass('active')
             window._synth.triggerAttackRelease(`${cLabel}3`, "8n")
+            // window._synth.triggerAttack(`${cLabel}3`)
         }
         const deactivateNote = (cLabel) => {
             $(`.${cLabel}`).removeClass('active')
+            // window._synth.triggerRelease()
         }
         const clearNotes = () => {
             $('.button').removeClass('active')
@@ -242,13 +245,23 @@
         //FPS Loop
         let fps = 5;
         let playing = false
+        let deltaTime = 0
         const update = _ => {
             setTimeout(function () {
                 requestAnimationFrame(update);
-                if (playing)
-                    advance()
+                if (playing) {
+                    deltaTime-= fps
+                    console.log(deltaTime)
+                    if(deltaTime < 0) {
+                        advance()
+                        if(window._eventIdx+1 < window._data.track[window._trackNumber].event.length){
+                            const currEvent = window._data.track[window._trackNumber].event[window._eventIdx+1]
+                            deltaTime = currEvent.deltaTime
+                        }
+                    }
+                }
 
-            }, 1000 / fps);
+            },  (fps/4));
         }
         const togglePlayback = _ => {
             playing = !playing
