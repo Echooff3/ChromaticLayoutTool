@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -10,6 +11,7 @@
         :root {
             --button-size: 3rem;
         }
+
         .button {
             width: var(--button-size);
             height: var(--button-size);
@@ -20,26 +22,32 @@
             border: 2px solid black;
             box-sizing: border-box;
         }
+
         .sharp {
             background-color: black;
             color: white;
         }
+
         .active {
             background-color: blue;
             color: white;
         }
+
         .grid-a {
             display: grid;
             grid-template-columns: repeat(5, var(--button-size));
         }
+
         .grid-b {
             display: flex;
             flex-direction: column;
         }
+
         .note-holder {
             display: flex;
             flex-direction: row;
         }
+
         .transport {
             display: grid;
             place-items: center;
@@ -49,22 +57,26 @@
             background-color: azure;
             padding: 1rem;
         }
+
         .controls {
             display: grid;
         }
+
         .grid {
             display: grid;
         }
+
         .grid-col {
             grid-auto-flow: column;
         }
     </style>
 </head>
+
 <body>
     <div class="note-holder">
     </div>
     <div class="transport">
-        <input type="file" id="filereader"/>
+        <input type="file" id="filereader" />
         <div class="controls">
             <select id="tracks"></select>
             <div class="grid grid-col">
@@ -75,15 +87,16 @@
             <button id="play">Play</button>
         </div>
     </div>
-    <script src="https://code.jquery.com/jquery-3.6.1.min.js" integrity="sha256-o88AwQnZB+VDvE9tvIXrMQaPlFFSUTR+nldQm1LuPXQ=" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.6.1.min.js"
+        integrity="sha256-o88AwQnZB+VDvE9tvIXrMQaPlFFSUTR+nldQm1LuPXQ=" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script type="module">
         import './midi.js'
         import './tone.js'
-        window.onload = function(){
+        window.onload = function () {
             // configure MIDIReader
             var source = document.getElementById('filereader');
-            MidiParser.parse( source, (obj) => {
+            MidiParser.parse(source, (obj) => {
                 // Your callback function
                 console.log(obj)
                 window._data = obj
@@ -98,32 +111,32 @@
             await Tone.start()
             console.log('audio is ready')
             window._synth = new Tone.PolySynth(Tone.Synth).toDestination();
-            window._synth.triggerAttackRelease("C4","8n")
+            window._synth.triggerAttackRelease("C4", "8n")
         }
     </script>
     <script>
         const noteLabels = [
-        'C', 'C#/Db',
-        'D', 'D#/Eb',
-        'E',
-        'F', 'F#/Gb',
-        'G', 'G#/Ab',
-        'A', 'A#/Bb',
-        'B',
+            'C', 'C#/Db',
+            'D', 'D#/Eb',
+            'E',
+            'F', 'F#/Gb',
+            'G', 'G#/Ab',
+            'A', 'A#/Bb',
+            'B',
         ]
 
         const classLabels = [
-        'C', 'Db',
-        'D', 'Eb',
-        'E',
-        'F', 'Gb',
-        'G', 'Ab',
-        'A', 'Bb',
-        'B',
+            'C', 'Db',
+            'D', 'Eb',
+            'E',
+            'F', 'Gb',
+            'G', 'Ab',
+            'A', 'Bb',
+            'B',
         ]
         const activateNote = (cLabel) => {
             $(`.${cLabel}`).addClass('active')
-            window._synth.triggerAttackRelease(`${cLabel}3`,"8n")
+            window._synth.triggerAttackRelease(`${cLabel}3`, "8n")
         }
         const deactivateNote = (cLabel) => {
             $(`.${cLabel}`).removeClass('active')
@@ -140,30 +153,30 @@
                 let cLabel = classLabels[idx]
                 let isSharp = note.indexOf('#') > -1
                 markup += `<div class="button ${isSharp ? `sharp` : `natural`} ${cLabel}">${note}</div>`
-                idx = ((((index+1) % 4) * 3) + startIndex) % 12
+                idx = ((((index + 1) % 4) * 3) + startIndex) % 12
             }
             markup += `</div>`
             $('.note-holder').append(markup)
         }
 
         const getTrackNames = () => {
-            const names = window._data.track.map( x => {
-                if(x.event[0].type == 255 && x.event[0].metaType == 3) {
+            const names = window._data.track.map(x => {
+                if (x.event[0].type == 255 && x.event[0].metaType == 3) {
                     return `${x.event[0].data} : (${x.event.length})`
                 }
                 return `unknown : (${x.event.length})`
             })
             console.log(names)
-            const options =  names.map((x,i) => {
-                    return {
-                        id: i,
-                        text: x,
-                        selected: i == window._trackNumber
-                    }
-                })
-                $("#tracks").select2({
-                    data: options
-                })
+            const options = names.map((x, i) => {
+                return {
+                    id: i,
+                    text: x,
+                    selected: i == window._trackNumber
+                }
+            })
+            $("#tracks").select2({
+                data: options
+            })
         }
 
         const loadTrack = (idx) => {
@@ -173,64 +186,91 @@
             $("#play").text('Play')
             $('#curStep').text(window._eventIdx)
             classLabels.forEach(x => deactivateNote(x))
-        } 
+        }
 
-        const advance = _ => {window._eventIdx++; processEvent(window._eventIdx)}
-        const reverse = _ => {window._eventIdx--; processEvent(window._eventIdx)}
+        const advance = _ => { processEvent(1) }
+        const reverse = _ => { processEvent(-1) }
 
         const processEvent = (idx) => {
             // console.log(idx)
-            if(idx < 0) {
+            window._eventIdx += idx
+            if (window._eventIdx < 0) {
                 loadTrack(window._trackNumber)
                 return
             }
-            if(idx >= window._data.track[window._trackNumber].event.length) {
+            if (window._eventIdx >= window._data.track[window._trackNumber].event.length) {
                 loadTrack(window._trackNumber)
                 return
             }
             $('#curStep').text(window._eventIdx)
-            const currEvent = window._data.track[window._trackNumber].event[idx]
+            const currEvent = window._data.track[window._trackNumber].event[window._eventIdx]
 
-            if(currEvent.type == 8) {
-                const note = classLabels[currEvent.data[0] % 12]
-                deactivateNote(note)
-            }
-
-            if(currEvent.type == 9) {
-                const note = classLabels[currEvent.data[0] % 12]
-                activateNote(note)
-            }
-            // Check next event
-            if(idx+1 != window._data.track[window._trackNumber].event.length) {
-                const nextEvent =  window._data.track[window._trackNumber].event[idx+1]
-                if(nextEvent.deltaTime == 0) {
-                    advance()
+            // Check next event based on direction
+            if (idx == 1) {
+                if (currEvent.type == 8) {
+                    const note = classLabels[currEvent.data[0] % 12]
+                    deactivateNote(note)
+                }
+                if (currEvent.type == 9) {
+                    const note = classLabels[currEvent.data[0] % 12]
+                    activateNote(note)
+                }
+                if (window._eventIdx + 1 != window._data.track[window._trackNumber].event.length) {
+                    const nextEvent = window._data.track[window._trackNumber].event[window._eventIdx + 1]
+                    if (nextEvent.deltaTime == 0) {
+                        advance()
+                    }
+                }
+            } else {
+                if (currEvent.type == 8) {
+                    const note = classLabels[currEvent.data[0] % 12]
+                    activateNote(note)
+                }
+                if (currEvent.type == 9) {
+                    const note = classLabels[currEvent.data[0] % 12]
+                    deactivateNote(note)
+                }
+                if (window._eventIdx - 1 != 0) {
+                    const nextEvent = window._data.track[window._trackNumber].event[window._eventIdx - 1]
+                    if (nextEvent.deltaTime == 0) {
+                        reverse()
+                    }
                 }
             }
+
         }
         //FPS Loop
         let fps = 5;
         let playing = false
         const update = _ => {
-            setTimeout(function() {
+            setTimeout(function () {
                 requestAnimationFrame(update);
-                if(playing)
+                if (playing)
                     advance()
-        
+
             }, 1000 / fps);
         }
         const togglePlayback = _ => {
             playing = !playing
             $("#play").text(playing ? 'Pause' : 'Play')
         }
-        
+
         $(document).ready(() => {
             $(".controls").hide()
-            buildCol(`A`, 12, `1.5rem`)
-            buildCol(`G`, 12, `0rem`)
-            buildCol(`Ab`, 12, `1.5rem`)
-            buildCol(`A`, 12, `2.5rem`)
-            buildCol(`G`, 12, `1.5rem`)
+            // C-Griff
+            // buildCol(`A`, 12, `1.5rem`)
+            // buildCol(`G`, 12, `0rem`)
+            // buildCol(`Ab`, 12, `1.5rem`)
+            // buildCol(`A`, 12, `2.5rem`)
+            // buildCol(`G`, 12, `1.5rem`)
+
+            // B-Griff
+            buildCol(`B`, 12, `1.5rem`)
+            buildCol(`Bb`, 12, `0rem`)
+            buildCol(`C`, 12, `1.5rem`)
+            buildCol(`B`, 12, `0rem`)
+            buildCol(`Bb`, 12, `1.5rem`)
+
             $("#tracks").on("change", (evt) => {
                 loadTrack((evt.currentTarget.value))
             })
@@ -241,4 +281,5 @@
         })
     </script>
 </body>
+
 </html>
